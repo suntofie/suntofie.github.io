@@ -1,4 +1,9 @@
-let bookmarksData = JSON.parse(localStorage.getItem('bookmarksData')) || defaultBookmarks;
+let bookmarksData;
+try {
+    bookmarksData = JSON.parse(localStorage.getItem('bookmarksData')) || defaultBookmarks;
+} catch (_) {
+    bookmarksData = defaultBookmarks;
+}
 
 // Адаптивное количество ссылок на страницу
 function getLinksPerPage() {
@@ -17,6 +22,9 @@ let currentLanguage = localStorage.getItem('currentLanguage') || 'en';
 
 // Search engine functionality
 let currentSearchEngine = localStorage.getItem('currentSearchEngine') || 'duckduckgo';
+if (!searchEngines[currentSearchEngine]) {
+    currentSearchEngine = 'duckduckgo';
+}
 
 // Function to apply theme
 function applyTheme(themeName) {
@@ -547,7 +555,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         window.open(urlToOpen, '_self');
                     } else {
-                        const searchUrl = searchEngines[currentSearchEngine].url + encodeURIComponent(trimmedQuery);
+                        const searchEngine = searchEngines[currentSearchEngine] || searchEngines.duckduckgo;
+                        const searchUrl = searchEngine.url + encodeURIComponent(trimmedQuery);
                         window.open(searchUrl, '_self');
                     }
                 }
@@ -597,8 +606,15 @@ window.addEventListener('resize', () => {
 // Добавляем поддержку PWA (Progressive Web App) features
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then((registration) => {
-            console.log('SW registered: ', registration);
+        fetch('/sw.js', { method: 'HEAD' }).then((response) => {
+            if (response.ok) {
+                return navigator.serviceWorker.register('/sw.js');
+            }
+            return null;
+        }).then((registration) => {
+            if (registration) {
+                console.log('SW registered: ', registration);
+            }
         }).catch((registrationError) => {
             console.log('SW registration failed: ', registrationError);
         });
